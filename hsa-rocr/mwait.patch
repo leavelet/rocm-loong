@@ -1,0 +1,132 @@
+diff '--color=auto' --unified --recursive --text src/ROCR-Runtime-rocm-5.6.0/src/CMakeLists.txt src/ROCR-Runtime-rocm-5.6.0-new/src/CMakeLists.txt
+--- src/ROCR-Runtime-rocm-5.6.0/src/CMakeLists.txt	2023-06-28 20:56:26.000000000 +0800
++++ src/ROCR-Runtime-rocm-5.6.0-new/src/CMakeLists.txt	2023-08-28 14:31:58.504000000 +0800
+@@ -129,7 +129,7 @@
+ set_property(TARGET ${CORE_RUNTIME_TARGET} PROPERTY INSTALL_RPATH "$ORIGIN;$ORIGIN/../../lib;$ORIGIN/../../lib64;$ORIGIN/../lib64" )
+ 
+ ## ------------------------- Linux Compiler and Linker options -------------------------
+-set ( HSA_CXX_FLAGS ${HSA_COMMON_CXX_FLAGS} -fexceptions -fno-rtti -fvisibility=hidden -Wno-error=missing-braces -Wno-error=sign-compare -Wno-sign-compare -Wno-write-strings -Wno-conversion-null -fno-math-errno -fno-threadsafe-statics -fmerge-all-constants -fms-extensions -Wno-error=comment -Wno-comment -Wno-error=pointer-arith -Wno-pointer-arith -Wno-error=unused-variable -Wno-error=unused-function -mmwaitx )
++set ( HSA_CXX_FLAGS ${HSA_COMMON_CXX_FLAGS} -fexceptions -fno-rtti -fvisibility=hidden -Wno-error=missing-braces -Wno-error=sign-compare -Wno-sign-compare -Wno-write-strings -Wno-conversion-null -fno-math-errno -fno-threadsafe-statics -fmerge-all-constants -fms-extensions -Wno-error=comment -Wno-comment -Wno-error=pointer-arith -Wno-pointer-arith -Wno-error=unused-variable -Wno-error=unused-function )
+ 
+ ## Extra image settings - audit!
+ set ( HSA_CXX_FLAGS ${HSA_CXX_FLAGS} -Wno-deprecated-declarations )
+diff '--color=auto' --unified --recursive --text src/ROCR-Runtime-rocm-5.6.0/src/core/runtime/default_signal.cpp src/ROCR-Runtime-rocm-5.6.0-new/src/core/runtime/default_signal.cpp
+--- src/ROCR-Runtime-rocm-5.6.0/src/core/runtime/default_signal.cpp	2023-06-28 20:56:26.000000000 +0800
++++ src/ROCR-Runtime-rocm-5.6.0-new/src/core/runtime/default_signal.cpp	2023-08-28 15:30:56.400000000 +0800
+@@ -42,7 +42,10 @@
+ 
+ #include "core/inc/default_signal.h"
+ #include "core/util/timer.h"
++
++#ifndef __loongarch__
+ #include <mwaitxintrin.h>
++#endif
+ 
+ #define MWAITX_ECX_TIMER_ENABLE 0x2  // BIT(1)
+ 
+@@ -102,9 +105,9 @@
+   const timer::fast_clock::duration fast_timeout =
+       timer::duration_from_seconds<timer::fast_clock::duration>(
+           double(timeout) / double(hsa_freq));
+-
++#ifndef __loongarch__
+   if (g_use_mwaitx) _mm_monitorx(const_cast<int64_t*>(&signal_.value), 0, 0);
+-
++#endif
+   while (true) {
+     if (!IsValid()) return 0;
+ 
+@@ -140,10 +143,12 @@
+ 
+     if (time - start_time > kMaxElapsed)
+       os::uSleep(20);
++#ifndef __loongarch__
+     else if (g_use_mwaitx) {
+       _mm_mwaitx(0, 60000, MWAITX_ECX_TIMER_ENABLE);  // 60000 ~20us on a 1.5Ghz CPU
+       _mm_monitorx(const_cast<int64_t*>(&signal_.value), 0, 0);
+     }
++#endif
+   }
+ }
+ 
+diff '--color=auto' --unified --recursive --text src/ROCR-Runtime-rocm-5.6.0/src/core/runtime/interrupt_signal.cpp src/ROCR-Runtime-rocm-5.6.0-new/src/core/runtime/interrupt_signal.cpp
+--- src/ROCR-Runtime-rocm-5.6.0/src/core/runtime/interrupt_signal.cpp	2023-06-28 20:56:26.000000000 +0800
++++ src/ROCR-Runtime-rocm-5.6.0-new/src/core/runtime/interrupt_signal.cpp	2023-08-28 15:37:15.244000000 +0800
+@@ -44,7 +44,10 @@
+ #include "core/inc/runtime.h"
+ #include "core/util/timer.h"
+ #include "core/util/locks.h"
++
++#ifndef __loongarch__
+ #include <mwaitxintrin.h>
++#endif
+ 
+ #define MWAITX_ECX_TIMER_ENABLE 0x2  // BIT(1)
+ 
+@@ -165,8 +168,9 @@
+           double(timeout) / double(hsa_freq));
+ 
+   bool condition_met = false;
++#ifndef __loongarch__
+   if (g_use_mwaitx) _mm_monitorx(const_cast<int64_t*>(&signal_.value), 0, 0);
+-
++#endif
+   while (true) {
+     if (!IsValid()) return 0;
+ 
+@@ -201,19 +205,23 @@
+     }
+ 
+     if (wait_hint == HSA_WAIT_STATE_ACTIVE) {
++#ifndef __loongarch__
+       if (g_use_mwaitx) {
+         _mm_mwaitx(0, 0, 0);
+         _mm_monitorx(const_cast<int64_t*>(&signal_.value), 0, 0);
+       }
++#endif
+       continue;
+     }
+ 
+     if (time - start_time < kMaxElapsed) {
+       //  os::uSleep(20);
++#ifndef __loongarch__
+       if (g_use_mwaitx) {
+         _mm_mwaitx(0, 60000, MWAITX_ECX_TIMER_ENABLE);
+         _mm_monitorx(const_cast<int64_t*>(&signal_.value), 0, 0);
+       }
++#endif
+       continue;
+     }
+ 
+diff '--color=auto' --unified --recursive --text src/ROCR-Runtime-rocm-5.6.0/src/core/util/lnx/os_linux.cpp src/ROCR-Runtime-rocm-5.6.0-new/src/core/util/lnx/os_linux.cpp
+--- src/ROCR-Runtime-rocm-5.6.0/src/core/util/lnx/os_linux.cpp	2023-06-28 20:56:26.000000000 +0800
++++ src/ROCR-Runtime-rocm-5.6.0-new/src/core/util/lnx/os_linux.cpp	2023-08-28 15:26:45.188000000 +0800
+@@ -60,7 +60,10 @@
+ #include <string>
+ #include <utility>
+ #include "core/inc/runtime.h"
++
++#ifndef __loongarch__
+ #include <cpuid.h>
++#endif
+ 
+ namespace rocr {
+ namespace os {
+@@ -645,6 +648,9 @@
+ }
+ 
+ bool ParseCpuID(cpuid_t* cpuinfo) {
++#ifdef __loongarch__
++  return false;
++#else
+   uint32_t eax, ebx, ecx, edx, max_eax = 0;
+ 
+   memset(cpuinfo, 0, sizeof(*cpuinfo));
+@@ -665,6 +671,7 @@
+     }
+   }
+   return true;
++#endif
+ }
+ 
+ }   //  namespace os
