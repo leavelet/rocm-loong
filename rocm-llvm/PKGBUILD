@@ -42,9 +42,10 @@ build() {
         -S "$_dirname/llvm"
         -DCMAKE_BUILD_TYPE=Release
         -DCMAKE_INSTALL_PREFIX='/opt/rocm/llvm'
-        -DLLVM_HOST_TRIPLE='loongarch64'
+	-DCMAKE_SKIP_RPATH=ON
         -DLLVM_ENABLE_PROJECTS='llvm;clang;compiler-rt;lld'
-        -DLLVM_TARGETS_TO_BUILD='AMDGPU;NVPTX;LoongArch'
+        -DLLVM_HOST_TRIPLE=$CHOST
+	-DLLVM_TARGETS_TO_BUILD='AMDGPU;NVPTX;LoongArch'
         -DCLANG_DEFAULT_LINKER=lld
         -DLLVM_INSTALL_UTILS=ON
         -DLLVM_ENABLE_BINDINGS=OFF
@@ -58,6 +59,7 @@ build() {
         -DLLVM_INCLUDE_TESTS=ON
         -DCLANG_INCLUDE_TESTS=ON
         -DLLVM_BINUTILS_INCDIR=/usr/include
+	-DGCC_INSTALL_PREFIX=/usr/lib/gcc
     )
     
     cmake "${cmake_args[@]}"
