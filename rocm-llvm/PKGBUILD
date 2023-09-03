@@ -9,7 +9,7 @@ pkgrel=1
 arch=('x86_64' 'loong64' )
 url='https://rocm.docs.amd.com/en/latest/reference/rocmcc/rocmcc.html'
 license=('custom:Apache 2.0 with LLVM Exception')
-makedepends=('cmake' 'python' 'ninja')
+makedepends=('cmake' 'python' 'ninja' 'mold')
 _git='https://github.com/RadeonOpenCompute/llvm-project'
 source=("${pkgname}-${pkgver}.tar.gz::$_git/archive/rocm-$pkgver.tar.gz"
         "${pkgname}-stdint.patch"
@@ -46,10 +46,10 @@ build() {
         -DLLVM_ENABLE_PROJECTS='llvm;clang;compiler-rt;lld'
         -DLLVM_HOST_TRIPLE=$CHOST
 	-DLLVM_TARGETS_TO_BUILD='AMDGPU;NVPTX;LoongArch'
-        -DCLANG_DEFAULT_LINKER=lld
+        -DCLANG_DEFAULT_LINKER=mold
         -DLLVM_INSTALL_UTILS=ON
         -DLLVM_ENABLE_BINDINGS=OFF
-        -DLLVM_LINK_LLVM_DYLIB=ON
+        -DLLVM_LINK_LLVM_DYLIB=OFF
       	-DLLVM_BUILD_LLVM_DYLIB=ON
         -DLLVM_ENABLE_ASSERTIONS=ON
         -DOCAMLFIND=NO
@@ -59,7 +59,7 @@ build() {
         -DLLVM_INCLUDE_TESTS=ON
         -DCLANG_INCLUDE_TESTS=ON
         -DLLVM_BINUTILS_INCDIR=/usr/include
-	-DGCC_INSTALL_PREFIX=/usr/lib/gcc
+	-DGCC_INSTALL_PREFIX=/usr
     )
     
     cmake "${cmake_args[@]}"
