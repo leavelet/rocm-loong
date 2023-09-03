@@ -9,16 +9,19 @@ pkgrel=1
 arch=('x86_64' 'loong64' )
 url='https://rocm.docs.amd.com/en/latest/reference/rocmcc/rocmcc.html'
 license=('custom:Apache 2.0 with LLVM Exception')
-makedepends=('cmake' 'python' 'ninja' 'mold')
+makedepends=('cmake' 'python' 'ninja')
 _git='https://github.com/RadeonOpenCompute/llvm-project'
 source=("${pkgname}-${pkgver}.tar.gz::$_git/archive/rocm-$pkgver.tar.gz"
         "${pkgname}-stdint.patch"
 	"llvm-newreloc-la64.patch"
-	"RuntimeDyld-MCJIT-Add-LoongArch-support.patch")
+	"RuntimeDyld-MCJIT-Add-LoongArch-support.patch"
+	"lld-16-loong.patch"
+)
 sha256sums=('e922bd492b54d99e56ed88c81e2009ed6472059a180b10cc56ce1f9bd2d7b6ed'
             '46a4bd4795437ea16ef2a2f8511d4492a92f961ce7916b0ff611123575152450'
             'f26ad05b93f5b7918fcf4209e892d135029e58ca0f0141a50cb67bfec7e80061'
-            '7c7de135adc059b5877270c38e050e02c516c6cb04cd4b10f1111d956e0c82e0')
+            '7c7de135adc059b5877270c38e050e02c516c6cb04cd4b10f1111d956e0c82e0'
+            'aadcabc762a80473e5fce195d4b123fb49984ebac424c71e25528a84876333bc')
 options=(staticlibs !lto)
 _dirname="$(basename "$_git")-$(basename "${source[0]}" .tar.gz)"
 
@@ -29,6 +32,7 @@ prepare() {
     patch -Np1 -i "$srcdir/RuntimeDyld-MCJIT-Add-LoongArch-support.patch"
     patch -Np2 -i "$srcdir/llvm-newreloc-la64.patch"
     cd ..
+    patch -Np1 -i "$srcdir/lld-16-loong.patch"
 }
 
 build() {
@@ -46,7 +50,7 @@ build() {
         -DLLVM_ENABLE_PROJECTS='llvm;clang;compiler-rt;lld'
         -DLLVM_HOST_TRIPLE=$CHOST
 	-DLLVM_TARGETS_TO_BUILD='AMDGPU;NVPTX;LoongArch'
-        -DCLANG_DEFAULT_LINKER=mold
+        -DCLANG_DEFAULT_LINKER=ld
         -DLLVM_INSTALL_UTILS=ON
         -DLLVM_ENABLE_BINDINGS=OFF
         -DLLVM_LINK_LLVM_DYLIB=OFF
@@ -60,10 +64,12 @@ build() {
         -DCLANG_INCLUDE_TESTS=ON
         -DLLVM_BINUTILS_INCDIR=/usr/include
 	-DGCC_INSTALL_PREFIX=/usr
+	-DLLVM_PARALLEL_COMPILE_JOBS=6
+	-DLLVM_PARALLEL_LINK_JOBS=1
     )
     
     cmake "${cmake_args[@]}"
-    cmake --build build -j $(nproc)
+    cmake --build build
 }
 
 # check() {
